@@ -1,0 +1,234 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "MM2 สคริปต์ภาษาไทย | AI GIMINI",
+   LoadingTitle = "กำลังโหลดระบบ...",
+   LoadingSubtitle = "โดย AI GIMINI ให้ AEK",
+   ConfigurationSaving = { Enabled = false }
+})
+
+-- ตัวแปรระบบ
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local WalkSpeedVal = 16
+local JumpPowerVal = 50
+local InvisibleActive = false
+local HitboxActive = false
+local HitboxSize = 10
+local ESPActive = false
+local AutoKillActive = false
+local AutoShootActive = false
+
+-- ฟังก์ชันระบุบทบาท
+local function GetRole(player)
+    if not player or not player.Character then return "Innocent" end
+    if player.Backpack:FindFirstChild("Knife") or player.Character:FindFirstChild("Knife") then
+        return "Murderer"
+    elseif player.Backpack:FindFirstChild("Gun") or player.Character:FindFirstChild("Gun") then
+        return "Sheriff"
+    end
+    return "Innocent"
+end
+
+-- แท็บที่ 1: การเคลื่อนไหว
+local Tab1 = Window:CreateTab("การเคลื่อนไหว", 4483362458)
+
+Tab1:CreateSlider({
+   Name = "วิ่งไว",
+   Range = {16, 200},
+   Increment = 1,
+   Suffix = " ความเร็ว",
+   CurrentValue = 16,
+   Callback = function(Value)
+      WalkSpeedVal = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+          LocalPlayer.Character.Humanoid.WalkSpeed = WalkSpeedVal
+      end
+   end,
+})
+
+Tab1:CreateSlider({
+   Name = "กระโดดสูง",
+   Range = {50, 300},
+   Increment = 1,
+   Suffix = " แรงกระโดด",
+   CurrentValue = 50,
+   Callback = function(Value)
+      JumpPowerVal = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+          LocalPlayer.Character.Humanoid.JumpPower = JumpPowerVal
+      end
+   end,
+})
+
+Tab1:CreateToggle({
+   Name = "ล่องหน",
+   CurrentValue = false,
+   Callback = function(Value)
+      InvisibleActive = Value
+      if LocalPlayer.Character then
+          for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+              if part:IsA("BasePart") or part:IsA("Decal") then
+                  if part.Name ~= "HumanoidRootPart" then
+                      part.Transparency = InvisibleActive and 1 or 0
+                  end
+              end
+          end
+      end
+   end,
+})
+
+-- แท็บที่ 2: ระบบออโต้และ Hitbox
+local Tab2 = Window:CreateTab("ระบบออโต้", 4483362458)
+
+Tab2:CreateToggle({
+   Name = "Auto Kill (ฆ่าอัตโนมัติเฉพาะตอนเป็น Murder)",
+   CurrentValue = false,
+   Callback = function(Value)
+      AutoKillActive = Value
+   end,
+})
+
+Tab2:CreateToggle({
+   Name = "Auto Shoot (ยิงกระสุนโค้งอัตโนมัติเฉพาะตอนเป็น Sheriff)",
+   CurrentValue = false,
+   Callback = function(Value)
+      AutoShootActive = Value
+   end,
+})
+
+Tab2:CreateToggle({
+   Name = "ขยาย Hitbox",
+   CurrentValue = false,
+   Callback = function(Value)
+      HitboxActive = Value
+   end,
+})
+
+Tab2:CreateSlider({
+   Name = "ขนาด Hitbox",
+   Range = {2, 50},
+   Increment = 1,
+   Suffix = " ขนาด",
+   CurrentValue = 10,
+   Callback = function(Value)
+      HitboxSize = Value
+   end,
+})
+
+-- แท็บที่ 3: ESP มองทะลุ
+local Tab3 = Window:CreateTab("มองทะลุ (ESP)", 4483362458)
+
+Tab3:CreateToggle({
+   Name = "เปิดใช้งาน ESP ภาษาไทย",
+   CurrentValue = false,
+   Callback = function(Value)
+      ESPActive = Value
+   end,
+})
+
+-- Loop ทำงานต่อเนื่อง
+RunService.RenderStepped:Connect(function()
+    -- บังคับความเร็วและการกระโดด
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = WalkSpeedVal
+        LocalPlayer.Character.Humanoid.JumpPower = JumpPowerVal
+    end
+
+    -- ระบบ Hitbox และ ESP
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            local role = GetRole(player)
+
+            -- Hitbox
+            if HitboxActive then
+                hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+                hrp.Transparency = 0.7
+                hrp.CanCollide = false
+            else
+                hrp.Size = Vector3.new(2, 2, 1)
+                hrp.Transparency = 1
+            end
+
+            -- ESP
+            local billboard = hrp:FindFirstChild("RoleESP")
+            if ESPActive then
+                if not billboard then
+                    billboard = Instance.new("BillboardGui")
+                    billboard.Name = "RoleESP"
+                    billboard.AlwaysOnTop = true
+                    billboard.Size = UDim2.new(0, 200, 0, 50)
+                    billboard.StudsOffset = Vector3.new(0, 3, 0)
+                    billboard.Parent = hrp
+
+                    local textLabel = Instance.new("TextLabel")
+                    textLabel.Name = "ESPLabel"
+                    textLabel.Size = UDim2.new(1, 0, 1, 0)
+                    textLabel.BackgroundTransparency = 1
+                    textLabel.TextScaled = true
+                    textLabel.Font = Enum.Font.SourceSansBold
+                    textLabel.Parent = billboard
+                end
+
+                local label = billboard.ESPLabel
+                if role == "Murderer" then
+                    label.Text = player.Name .. "\n[ไอเลว ไอชั่ว]"
+                    label.TextColor3 = Color3.fromRGB(255, 0, 0)
+                elseif role == "Sheriff" then
+                    label.Text = player.Name .. "\n[ฮีโร่ นกโดโด้]"
+                    label.TextColor3 = Color3.fromRGB(0, 150, 255)
+                else
+                    label.Text = player.Name .. "\n[คนดี ศรีสังคม]"
+                    label.TextColor3 = Color3.fromRGB(0, 255, 0)
+                end
+            else
+                if billboard then
+                    billboard:Destroy()
+                end
+            end
+        end
+    end
+
+    -- ระบบ Auto Kill (เมื่อเป็น Murderer)
+    if AutoKillActive and GetRole(LocalPlayer) == "Murderer" then
+        local knife = LocalPlayer.Character:FindFirstChild("Knife") or LocalPlayer.Backpack:FindFirstChild("Knife")
+        if knife then
+            if knife.Parent == LocalPlayer.Backpack then
+                LocalPlayer.Character.Humanoid:EquipTool(knife)
+            end
+            for _, target in pairs(Players:GetPlayers()) do
+                if target ~= LocalPlayer and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                    if (target.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < 20 then
+                        knife:Activate()
+                        firetouchinterest(knife.Handle, target.Character.HumanoidRootPart, 0)
+                        firetouchinterest(knife.Handle, target.Character.HumanoidRootPart, 1)
+                    end
+                end
+            end
+        end
+    end
+
+    -- ระบบ Auto Shoot ยิงกระสุนโค้ง (เมื่อเป็น Sheriff)
+    if AutoShootActive and GetRole(LocalPlayer) == "Sheriff" then
+        local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Gun")
+        if gun then
+            for _, target in pairs(Players:GetPlayers()) do
+                if target ~= LocalPlayer and GetRole(target) == "Murderer" and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                    if gun.Parent == LocalPlayer.Backpack then
+                        LocalPlayer.Character.Humanoid:EquipTool(gun)
+                    end
+                    local knifeTargetPos = target.Character.HumanoidRootPart.Position
+                    local gunShootEvent = gun:FindFirstChild("Shoot") or game:GetService("ReplicatedStorage"):FindFirstChild("Shoot", true)
+                    if gunShootEvent and gunShootEvent:IsA("RemoteEvent") then
+                        -- ส่งพิกัดยิงแบบติดตามเป้าหมาย (กระสุนโค้งเข้าเป้า)
+                        gunShootEvent:FireServer(knifeTargetPos, knifeTargetPos + Vector3.new(0, 5, 0))
+                    end
+                end
+            end
+        end
+    end
+end)
